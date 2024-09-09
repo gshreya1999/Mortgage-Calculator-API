@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const config = require('./config');
 
+// Function to calculate mortgage with the mortgage payment formula
 const calculateMortgage = function(principal, rateOfInterest, n) {
     
     const factor = Math.pow(1+rateOfInterest, n);
@@ -9,13 +11,14 @@ const calculateMortgage = function(principal, rateOfInterest, n) {
     return payment*principal;
 };
 
-/* CMHC Insurance rate only considers the BC Mortgage default rate 
+/*
+ * CMHC Insurance rate only considers the BC Mortgage default rate 
  *(no non-traditional downpayment or self-employed non-verified income) 
  */
 const calculateCMHCInsurance = function(downPayment, propertyPrice) {
     
     const downPaymentPercent = downPayment * 100/propertyPrice;
-    if(downPaymentPercent >= 20 || propertyPrice > 1000000) {
+    if(downPaymentPercent >= 20 || propertyPrice > config.MILLION_DOLLARS) {
         return 0;
     }
 
@@ -28,30 +31,38 @@ const calculateCMHCInsurance = function(downPayment, propertyPrice) {
     return insurancePercent;
 }
 
+// Function to verify if the down payment is valid
 const verifyMinimumDownPayment = function(downPayment, propertyPrice) {
 
-    const percent = downPayment * 100/propertyPrice;
-    if(percent < 5) {
+    const downPaymentPercent = downPayment * 100/propertyPrice;
+    
+    // Downpayment has to be more than 5%
+    if(downPaymentPercent < config.MINIMUM_DOWN_PAYMENT_IN_PERCENT) {
         return false;
     }
-    if(propertyPrice > 1000000 && percent <= 20) {
+    if(propertyPrice > config.MILLION_DOLLARS && downPaymentPercent <= 20) {
         return false;
     }
-    if(propertyPrice > 500000) {
-        let minDownPayment = 0.05*500000 + 0.1*(propertyPrice-500000);
-        if(downPayment<minDownPayment)
+    if(propertyPrice > config.FIVE_HUNDRED_THOUSAND_DOLLARS) {
+        let requiredDownPayment = 0.05 * config.FIVE_HUNDRED_THOUSAND_DOLLARS + 0.1 * (propertyPrice - config.FIVE_HUNDRED_THOUSAND_DOLLARS);
+        if(downPayment < requiredDownPayment)
             return false;
     }
     return true;
 };
 
+// Function to verify if the Amortization period is valid
 const verifyAmortizationPeriod = function(downPayment, propertyPrice, amortizationPeriod) {
 
     const downPaymentPercent = downPayment * 100/propertyPrice;
+    
+    // Amortization period has to be less than 25 years for CMHC insurance
+    // So, downpayment needs to be  20% or more for amortization period over 25 years
     if(amortizationPeriod>25 && downPaymentPercent<20) {
         return false;
     }
 
+    // Ensuring amortization period is one of 5, 10, 15, 20, 25, 30
     if (amortizationPeriod < 5 || amortizationPeriod > 30 || amortizationPeriod%5 != 0) {
         return false;
     }
@@ -59,18 +70,18 @@ const verifyAmortizationPeriod = function(downPayment, propertyPrice, amortizati
     return true;
 }
 
-// Reference for difference between monthly, bi-weekly and accelerated bi-weekly payment: https://wowa.ca/accelerated-bi-weekly-mortgage-payments
-// Values matching with: https://apps.royalbank.com/apps/mortgages/mortgage-payment-calculator/#top-page-content-2
 const getPaymentPerPaymentSchedule = function(monthlyPayment, paymentSchedule) {
 
-    if(paymentSchedule.toLowerCase() === "monthly") {
+    if(paymentSchedule.toLowerCase() === config.PaymentSchedules.MONTHLY) {
         return monthlyPayment;
     }
-    if(paymentSchedule.toLowerCase() === "bi-weekly") {
-        return monthlyPayment*12/26;
+    // Bi-weekly payment is monthly payment in a year divided by 26 payments; same yearly amount as monthly payments
+    if(paymentSchedule.toLowerCase() === config.PaymentSchedules.BI_WEEKLY) {
+        return monthlyPayment * 12 / 26;
     }
-    if(paymentSchedule.toLowerCase() === "accelerated bi-weekly") {
-        return monthlyPayment/2;
+    // Accelerated Bi-weekly payment is half of a monthly payment paid 26 times a year; equivalent to 13 months a years
+    if(paymentSchedule.toLowerCase() === config.PaymentSchedules.ACCELERATED_BI_WEEKLY) {
+        return monthlyPayment / 2;
     }
 
     return 0;
@@ -79,24 +90,29 @@ const getPaymentPerPaymentSchedule = function(monthlyPayment, paymentSchedule) {
 router.post('/calculate-mortgage', (req, res) => {
 
     try {
-        const { propertyPrice, downPayment, annualInterestRate, amortizationPeriod, paymentSchedule } = req.body;
+        let { propertyPrice, downPayment, annualInterestRate, amortizationPeriod, paymentSchedule } = req.body;
         if (!propertyPrice || !downPayment || !annualInterestRate || !amortizationPeriod || !paymentSchedule) {
             return res.status(400).json({ error: 'All fields are required' });
         }
+
+        const isValidPositiveNumber = (value) => /^\d+(\.\d+)?$/.test(value) && parseFloat(value) > 0;
+
         if (
-            isNaN(propertyPrice) || propertyPrice <= 0 ||
-            isNaN(downPayment) || downPayment <= 0 ||
-            isNaN(annualInterestRate) || annualInterestRate <= 0 ||
-            isNaN(amortizationPeriod) || amortizationPeriod <= 0
+            !isValidPositiveNumber(propertyPrice) ||
+            !isValidPositiveNumber(downPayment) ||
+            !isValidPositiveNumber(annualInterestRate) ||
+            !isValidPositiveNumber(amortizationPeriod)
           ) {
             return res.status(400).json({ error: 'Property price, down payment, amortization period and annual interest rate must be positive numbers' });
         }
+
+        propertyPrice = parseFloat(propertyPrice);
+        downPayment = parseFloat(downPayment);
+        annualInterestRate = parseFloat(annualInterestRate);
+        amortizationPeriod = parseFloat(amortizationPeriod, 10);
       
-          if (typeof paymentSchedule !== 'string') {
-            return res.status(400).json({ error: 'Payment schedule must be string' });
-        }
         if(downPayment >= propertyPrice) {
-            return res.status(400).json({ error: 'Invalid inputs' });
+            return res.status(400).json({ error: 'Invalid inputs: down payment cannot be greater than or equal to the property price' });
         }
 
         if(!verifyAmortizationPeriod(downPayment, propertyPrice, amortizationPeriod)) {

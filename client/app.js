@@ -23,8 +23,6 @@ document.getElementById("mortgage-form").addEventListener("submit", async functi
   const amortizationPeriod = parseInt(document.getElementById("amortization-period").value);
   const downPayment = parseFloat(removeNonNumeric(document.getElementById("down-payment").value));
   const paymentSchedule = document.getElementById("payment-schedule").value;
-
-  console.log(`Property Price: ${propertyPrice}, Interest Rate: ${annualInterestRate}, Amortization Period: ${amortizationPeriod}, Down Payment: ${downPayment}, Payment Schedule: ${paymentSchedule}`);
   
   try {
     const response = await fetch('http://localhost:3000/api/calculate-mortgage', {

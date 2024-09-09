@@ -283,7 +283,6 @@ describe('POST /api/calculate-mortgage', () => {
       expect(res.statusCode).toEqual(200);
       expect(res.body).toHaveProperty('cmhcInsurance');
       const expectedCmhcInsurance = 3.1*(propertyPrice-0.1*propertyPrice)/100;
-      console.log(expectedCmhcInsurance);
       expect(parseFloat(res.body.cmhcInsurance)).toBeCloseTo(expectedCmhcInsurance, 2);
     });
 
