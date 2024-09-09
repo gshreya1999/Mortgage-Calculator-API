@@ -26,6 +26,36 @@ describe('POST /api/calculate-mortgage', () => {
 
   describe('Should return error is inputs are invalid', () => {
 
+    it('should give error if any input is missing', async () => {
+      const res = await request(app)
+        .post('/api/calculate-mortgage')
+        .send({
+          propertyPrice: 500000,
+          downPayment: 50000,
+          annualInterestRate: 3,
+          paymentSchedule: 'monthly'
+        });
+  
+      expect(res.statusCode).toEqual(400);
+      expect(res.body).toHaveProperty('error', 'All fields are required');
+    });
+    
+    it('should give error if downpayment is not less than property price', async () => {
+      let price  = 400000;
+      const res = await request(app)
+        .post('/api/calculate-mortgage')
+        .send({
+          propertyPrice: price,
+          downPayment: price,
+          annualInterestRate: 3,
+          amortizationPeriod: 25,
+          paymentSchedule: 'monthly'
+        });
+  
+      expect(res.statusCode).toEqual(400);
+      expect(res.body).toHaveProperty('error', 'Invalid inputs');
+    }); 
+
     it('should give error if any value is negative', async () => {
       const res = await request(app)
         .post('/api/calculate-mortgage')
@@ -119,6 +149,21 @@ describe('POST /api/calculate-mortgage', () => {
       expect(res.statusCode).toEqual(200);
       expect(res.body).toHaveProperty('mortgagePayment');
       expect(res.body).toHaveProperty('cmhcInsurance');
+    });
+
+    it('should fail if downpayment is less than or equal to 20% and price is more than $1,000,000', async () => {
+      const res = await request(app)
+        .post('/api/calculate-mortgage')
+        .send({
+          propertyPrice: 1100000,
+          downPayment: 0.2*1100000,
+          annualInterestRate: 3,
+          amortizationPeriod: 25,
+          paymentSchedule: 'monthly'
+        });
+  
+      expect(res.statusCode).toEqual(400);
+      expect(res.body).toHaveProperty('error', 'Downpayment is too low!');
     });
 
   })
