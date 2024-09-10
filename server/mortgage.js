@@ -36,7 +36,7 @@ const verifyMinimumDownPayment = function(downPayment, propertyPrice) {
 
     const downPaymentPercent = downPayment * 100/propertyPrice;
     
-    // Downpayment has to be more than 5%
+    // Downpayment has to be 5% or more
     if(downPaymentPercent < config.MINIMUM_DOWN_PAYMENT_IN_PERCENT) {
         return false;
     }
@@ -87,9 +87,10 @@ const getPaymentPerPaymentSchedule = function(monthlyPayment, paymentSchedule) {
     return 0;
 }
 
-router.post('/calculate-mortgage', (req, res) => {
+// Validation Middleware
+const validateMortgageInputs = (req, res, next) => {
 
-    try {
+    try{
         let { propertyPrice, downPayment, annualInterestRate, amortizationPeriod, paymentSchedule } = req.body;
         if (!propertyPrice || !downPayment || !annualInterestRate || !amortizationPeriod || !paymentSchedule) {
             return res.status(400).json({ error: 'All fields are required' });
@@ -115,6 +116,10 @@ router.post('/calculate-mortgage', (req, res) => {
             return res.status(400).json({ error: 'Invalid inputs: down payment cannot be greater than or equal to the property price' });
         }
 
+        if(typeof(paymentSchedule) !== 'string') {
+            return res.status(400).json({ error: 'Payment schedule must be string' });
+        }
+
         if(!verifyAmortizationPeriod(downPayment, propertyPrice, amortizationPeriod)) {
             return res.status(400).json({ error: 'Invalid Amortization Period!' });
         }
@@ -122,12 +127,32 @@ router.post('/calculate-mortgage', (req, res) => {
             return res.status(400).json({ error: 'Downpayment is too low!' });
         }
 
+        next();
+
+    } catch(error) {
+        res.status(400).json({ error: error.message });
+    }
+
+};
+
+router.post('/calculate-mortgage', validateMortgageInputs, (req, res) => {
+
+    try {
+        let { propertyPrice, downPayment, annualInterestRate, amortizationPeriod, paymentSchedule } = req.body;
+         
+        propertyPrice = parseFloat(propertyPrice);
+        downPayment = parseFloat(downPayment);
+        annualInterestRate = parseFloat(annualInterestRate);
+        amortizationPeriod = parseFloat(amortizationPeriod, 10);
+
         let CMHCInsurancePercent = calculateCMHCInsurance(downPayment, propertyPrice);
         let principal = propertyPrice-downPayment;
         let cmhcInsurance = CMHCInsurancePercent*principal/100;
         principal += cmhcInsurance;
 
-        let semiAnnualInterestRate = annualInterestRate/200; // compounded semi-annually
+        // Interest rate is compounded semi-annually
+        let semiAnnualInterestRate = annualInterestRate/200;
+        // Effective monthly interest rate based on semi annual compounding
         let monthlyInterestRate = Math.pow((1+semiAnnualInterestRate),1/6) -1;
         let n = 12*amortizationPeriod;
 

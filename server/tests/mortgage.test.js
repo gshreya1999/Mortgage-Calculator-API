@@ -24,7 +24,7 @@ describe('POST /api/calculate-mortgage', () => {
     expect(res.body).toHaveProperty('cmhcInsurance');
   });
 
-  describe('Should return error is inputs are invalid', () => {
+  describe('Should return error if inputs are invalid', () => {
 
     it('should give error if any input is missing', async () => {
       const res = await request(app)
@@ -53,7 +53,7 @@ describe('POST /api/calculate-mortgage', () => {
         });
   
       expect(res.statusCode).toEqual(400);
-      expect(res.body).toHaveProperty('error', 'Invalid inputs');
+      expect(res.body).toHaveProperty('error', 'Invalid inputs: down payment cannot be greater than or equal to the property price');
     }); 
 
     it('should give error if any value is negative', async () => {
@@ -277,7 +277,7 @@ describe('POST /api/calculate-mortgage', () => {
           downPayment: 0.1*propertyPrice,
           annualInterestRate: 3,
           amortizationPeriod: 25,
-          paymentSchedule: 'Monthly'
+          paymentSchedule: 'Accelerated bi-weekly'
         });
     
       expect(res.statusCode).toEqual(200);
