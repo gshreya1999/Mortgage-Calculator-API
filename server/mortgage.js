@@ -15,7 +15,7 @@ const calculateMortgage = function(principal, rateOfInterest, n) {
  * CMHC Insurance rate only considers the BC Mortgage default rate 
  *(no non-traditional downpayment or self-employed non-verified income) 
  */
-const calculateCMHCInsurance = function(downPayment, propertyPrice) {
+const calculateCMHCInsuranceRate = function(downPayment, propertyPrice) {
     
     const downPaymentPercent = downPayment * 100/propertyPrice;
     if(downPaymentPercent >= 20 || propertyPrice > config.MILLION_DOLLARS) {
@@ -145,7 +145,7 @@ router.post('/calculate-mortgage', validateMortgageInputs, (req, res) => {
         annualInterestRate = parseFloat(annualInterestRate);
         amortizationPeriod = parseFloat(amortizationPeriod, 10);
 
-        let CMHCInsurancePercent = calculateCMHCInsurance(downPayment, propertyPrice);
+        let CMHCInsurancePercent = calculateCMHCInsuranceRate(downPayment, propertyPrice);
         let principal = propertyPrice-downPayment;
         let cmhcInsurance = CMHCInsurancePercent*principal/100;
         principal += cmhcInsurance;
