@@ -20,7 +20,7 @@ describe('POST /api/calculate-mortgage', () => {
       });
 
     expect(res.statusCode).toEqual(200);
-    expect(res.body).toHaveProperty('mortgagePayment');
+    expect(res.body).toHaveProperty('paymentPerPaymentSchedule');
     expect(res.body).toHaveProperty('cmhcInsurance');
   });
 
@@ -147,7 +147,7 @@ describe('POST /api/calculate-mortgage', () => {
         });
   
       expect(res.statusCode).toEqual(200);
-      expect(res.body).toHaveProperty('mortgagePayment');
+      expect(res.body).toHaveProperty('paymentPerPaymentSchedule');
       expect(res.body).toHaveProperty('cmhcInsurance');
     });
 
@@ -260,7 +260,7 @@ describe('POST /api/calculate-mortgage', () => {
         });
   
       expect(res.statusCode).toEqual(200);
-      expect(res.body).toHaveProperty('mortgagePayment');
+      expect(res.body).toHaveProperty('paymentPerPaymentSchedule');
       expect(res.body).toHaveProperty('cmhcInsurance');
     });
 

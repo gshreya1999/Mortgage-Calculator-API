@@ -163,7 +163,7 @@ router.post('/calculate-mortgage', validateMortgageInputs, (req, res) => {
         }
 
         return res.status(200).json({
-            mortgagePayment: mortgagePayment.toFixed(2),
+            paymentPerPaymentSchedule: mortgagePayment.toFixed(2),
             cmhcInsurance: cmhcInsurance.toFixed(2)
         });
 

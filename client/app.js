@@ -41,7 +41,7 @@ document.getElementById("mortgage-form").addEventListener("submit", async functi
     
     if (response.ok) {
       document.getElementById("result").innerHTML = 
-        `Payment per payment schedule: $${data.mortgagePayment}
+        `Payment per payment schedule: $${data.paymentPerPaymentSchedule}
         <br><br>
         CMHC insurance over the amortization period: $${data.cmhcInsurance}`;
     } else {
